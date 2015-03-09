@@ -39,18 +39,12 @@ post '/' do
   @submission.usStates = params[:usStates] || ''
 
   first_letter = @submission.emailAddress[0]
-  if ('a'..'h').to_a.include?(first_letter)
+  if ('a'..'z').to_a.include?(first_letter)
   	@submission.bdr = "Casey"
   	notification_email = "casey@twilio.com"
-  elsif ('i'..'p').to_a.include?(first_letter)
-  	@submission.bdr = "Tom"
-  	notification_email = "tom@twilio.com"
-  elsif ('q'..'z').to_a.include?(first_letter)
-  	@submission.bdr = "Bill"
-  	notification_email = "bill@twilio.com"
   else
   	@submission.bdr = "error"
-  	notification_email = "casey@twilio.com"
+  	notification_email = "emerald@twilio.com"
   end
 
   email_text = 'You have a new FSR submission, please reach out within the next hour. Here is the info:
@@ -69,4 +63,9 @@ post '/' do
   end
 
   @submission.save
+end
+
+get '/' do
+	@submissions = Submission.all
+	erb :submissions
 end
