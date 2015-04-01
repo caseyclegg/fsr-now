@@ -1,0 +1,18 @@
+<div class="container">
+<div class="row">
+<div class="col-md-12">
+<h1>Recipients</h1>
+<table class="table table-striped">
+<tr><th>Name</th><th>Email</th><th>Phone</th><th>Hours</th><th>&nbsp;</th></tr>
+<% @recipients.each do |recipient| %>
+  <tr>
+    <td><%= recipient.name %></td>
+    <td><%= recipient.email %></td>
+    <td><%= recipient.phone.pretty_phone %></td>
+    <td><%= recipient.hours %></td>
+    <td><a href='/recipients/<%= recipient.id %>/edit'>Edit</a></td>
+ 	</tr>
+<% end %>
+</table> 
+<br/><br/><button onclick="location.href='/recipients/new'">Add Recipient</button>
+</div></div></div>

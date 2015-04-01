@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><%= @title || "Statapile" %></title>
+    <title><%= @title || "FSR Now" %></title>
 
     <!-- Bootstrap -->
     <link href="/css/bootstrap.min.css" rel="stylesheet">
@@ -28,6 +28,14 @@
             <span class="icon-bar"></span>
           </button>
           <a class="navbar-brand" href="#"><img alt="Twilio" src="/images/twilio_logo.png"></a>
+        </div>
+        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+            <ul class="nav navbar-nav">
+              <li<% if @active_area == 'submissions' then %> class="active"<% end %>><a href="/submissions">Submissions</a></li>
+              <li<% if @active_area == 'recipients' then %> class="active"<% end %>><a href="/recipients">Recipients</a></li>
+              <li<% if @active_area == 'territories' then %> class="active"<% end %>><a href="/territories">Territories</a></li>
+              <li<% if @active_area == 'geos' then %> class="active"<% end %>><a href="/geos">Geos</a></li>
+            </ul>
         </div>
       </div><!-- /.container-fluid -->
     </nav>

@@ -1,0 +1,37 @@
+<div class="container">
+<div class="row">
+<div class="col-md-12">
+<h1>New Recipient</h1>
+<form class="form-horizontal" action=<%= '/recipients' %> method='post'>
+	<div class="form-group">
+    <label for="name" class="col-sm-2 control-label">Name</label>
+    <div class="col-sm-10">
+      <input type="text" class="form-control" name="name" id="name">
+    </div>
+  </div>
+  <div class="form-group">
+    <label for="email" class="col-sm-2 control-label">Email</label>
+    <div class="col-sm-10">
+      <input type="text" class="form-control" name="email" id="email">
+    </div>
+  </div>
+  <div class="form-group">
+    <label for="phone" class="col-sm-2 control-label">Phone</label>
+    <div class="col-sm-10">
+      <input type="text" class="form-control" name="phone" id="phone">
+    </div>
+  </div>
+  <div class="form-group">
+    <label for="hours" class="col-sm-2 control-label">Working Hours</label>
+    <div class="col-sm-10">
+      <select class="form-control" name="hours">
+	      	<option value=''>&nbsp;</option>
+			  <% ['pt','mt','ct','et','emea'].each do |type| %>
+			  	<option value='<%= type %>'><%= type %></option>
+			  <% end %>
+			</select>
+    </div>
+  </div>
+<input class="btn btn-default" type="submit" value="Save">
+</form>
+</div></div></div>

@@ -1,0 +1,26 @@
+<div class="container">
+<div class="row">
+<div class="col-md-12">
+<h1>Territories</h1>
+<table class="table table-striped">
+<tr><th>Name</th><th>Recipient</th><th>&nbsp;</th></tr>
+<% @territories.each do |territory| %>
+  <tr>
+  <form class='form-horizontal' action='/territories/<%= territory.id.to_s %>' method='post'>
+  	<input type="hidden" name="_method" value="put">
+  	<td><%= territory.name %></td>
+    <td>
+			<select class="form-control" name="recipient_id" id="recipient_id">
+				<option value=''></option>
+			  <% @recipients.each do |recipient| %>
+			  	<option value='<%= recipient.id %>' <%= 'selected' if territory.recipient_id==recipient.id %>><%= recipient.name %></option>
+			  <% end %>
+			</select>
+		</td>
+		<td><input class="btn btn-success btn-xs" type="submit" value="Update"></td>
+ 	</tr>
+ 	</form>
+<% end %>
+</table> 
+<br/><br/><button onclick="location.href='/territories/new'">Add Territory</button>
+</div></div></div>

@@ -11,10 +11,33 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20150308162216) do
+ActiveRecord::Schema.define(version: 20150328160139) do
+
+  create_table "geos", force: :cascade do |t|
+    t.string   "country"
+    t.string   "sub_country"
+    t.string   "zip_code"
+    t.string   "area"
+    t.integer  "territory_id"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+  end
+
+  add_index "geos", ["territory_id"], name: "index_geos_on_territory_id"
+
+  create_table "recipients", force: :cascade do |t|
+    t.string   "name"
+    t.string   "email"
+    t.string   "phone"
+    t.string   "hours"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+  end
 
   create_table "submissions", force: :cascade do |t|
     t.text     "all_params"
+    t.string   "busPhone"
+    t.string   "caTerritories"
     t.string   "company"
     t.string   "country"
     t.string   "description1"
@@ -22,11 +45,24 @@ ActiveRecord::Schema.define(version: 20150308162216) do
     t.string   "firstName"
     t.string   "jobRole"
     t.string   "lastName"
+    t.string   "postal1"
+    t.string   "ukBoroughs"
     t.string   "usStates"
-    t.string   "caTerritories"
-    t.string   "bdr"
+    t.string   "recipient_id"
+    t.string   "status"
     t.datetime "created_at"
     t.datetime "updated_at"
   end
+
+  add_index "submissions", ["recipient_id"], name: "index_submissions_on_recipient_id"
+
+  create_table "territories", force: :cascade do |t|
+    t.string   "name"
+    t.integer  "recipient_id"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+  end
+
+  add_index "territories", ["recipient_id"], name: "index_territories_on_recipient_id"
 
 end

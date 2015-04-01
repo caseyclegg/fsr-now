@@ -1,0 +1,28 @@
+<div class="container">
+<div class="row">
+<div class="col-md-12">
+<h1>Geos</h1>
+<table class="table table-striped">
+<tr><th>Country</th><th>State/Province</th><th>Zip Code</th><th>Area</th><th>Territory</th><th>&nbsp;</th></tr>
+<% @geos.each do |geo| %>
+  <tr>
+  <form class='form-horizontal' action='/geos/<%= geo.id.to_s %>' method='post'>
+  	<input type="hidden" name="_method" value="put">
+  	<td><%= geo.country %></td>
+  	<td><%= geo.sub_country %></td>
+  	<td><%= geo.zip_code %></td>
+  	<td><%= geo.area %></td>
+    <td>
+			<select class="form-control" name="territory_id" id="territory_id">
+				<option value=''></option>
+			  <% @territories.each do |territory| %>
+			  	<option value='<%= territory.id %>' <%= 'selected' if geo.territory_id==territory.id %>><%= territory.name %></option>
+			  <% end %>
+			</select>
+		</td>
+		<td><input class="btn btn-success btn-xs" type="submit" value="Update"></td>
+ 	</tr>
+ 	</form>
+<% end %>
+</table>
+</div></div></div>

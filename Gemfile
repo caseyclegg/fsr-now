@@ -6,7 +6,6 @@ gem "activerecord"
 gem "sinatra-activerecord"
 gem "twilio-ruby"
 gem 'bcrypt-ruby', '~> 3.0.0'
-gem 'stripe'
 gem 'sendgrid-ruby'
 
 group :development do
