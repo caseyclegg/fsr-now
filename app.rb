@@ -2,6 +2,13 @@ require 'sinatra'
 require 'sinatra/activerecord'
 require 'twilio-ruby'
 require 'sendgrid-ruby'
+require 'phonelib'
+
+configure do 
+  enable :sessions
+  set :session_secret, 'nick is the man'
+  Phonelib.default_country = "US"
+end
 
 configure :development do
   set :database, 'sqlite3:fsr.db'
@@ -68,7 +75,7 @@ class Submission < ActiveRecord::Base
   end
 
   def phone
-    self.busPhone.intl_phone
+    Phonelib.parse(self.busPhone).e164
   end
 
 end
@@ -87,16 +94,46 @@ class Recipient < ActiveRecord::Base
   has_many :territories
   has_many :geos, :through => :territories
   has_many :submissions
+  validates :phone, phone: true
+  before_save { self.phone = Phonelib.parse(self.phone).e164 }
 
   def work_hours?
     work_hours = false
-    if self.hours == 'emea'
-      work_hours = true if Time.now >= '09:00:00 GMT' && Time.now <= '17:00:00 GMT'
-    else
-      work_hours = true #if Time.now >= '09:00:00 PT' && Time.now <= '17:00:00 PT'
-    end
+    offset = case self.hours
+      when 'emea' then 0
+      when 'et' then -4
+      when 'ct' then -5
+      when 'mt' then -6
+      when 'pt' then -7
+      else -7
+      end
+    now = Time.now.getgm+offset*60*60
+    work_hours = true if now >= Time.new(Time.now.year,Time.now.month,Time.now.day,8,0,0,0) && now <= Time.new(Time.now.year,Time.now.month,Time.now.day,18,0,0,0)
     return work_hours
   end
+end
+
+class User < ActiveRecord::Base
+  before_save { self.email = email.downcase }
+  before_create :create_remember_token
+  VALID_EMAIL_REGEX = /\A[\w+\-.]+@[a-z\d\-.]+\.[a-z]+\z/i
+  validates :email, presence: true, format: { with: VALID_EMAIL_REGEX },
+                                               uniqueness: { case_sensitive: false }
+  validates :password, length: { minimum: 6 }
+
+  def User.new_remember_token
+    SecureRandom.urlsafe_base64
+  end
+
+  def User.encrypt(token)
+    Digest::SHA1.hexdigest(token.to_s)
+  end
+
+  private
+
+    def create_remember_token
+      self.remember_token = User.encrypt(User.new_remember_token)
+    end
 end
 
 class String
@@ -122,10 +159,191 @@ class NilClass
 end
 
 helpers do
-  
+  def sign_in(user)
+    remember_token = User.new_remember_token
+    session[:remember_token] = remember_token
+    user.update_attribute(:remember_token, User.encrypt(remember_token))
+    self.current_user = user
+  end
+
+  def signed_in?
+    !current_user.nil?
+  end
+
+  def current_user=(user)
+    @current_user = user
+  end
+
+  def current_user
+    remember_token = User.encrypt(session[:remember_token])
+    @current_user ||= User.find_by(remember_token: remember_token)
+  end
+
+  def sign_out
+    current_user.update_attribute(:remember_token,
+                                  User.encrypt(User.new_remember_token))
+    session.clear
+    self.current_user = nil
+  end
 end
 
-#static pages and sign in
+post '/submissions' do 
+  @submission = Submission.new
+  @submission.all_params = params.to_s
+  @submission.busPhone = params[:busPhone] || ''
+  @submission.caTerritories = params[:caTerritories] || ''
+  @submission.company = params[:company] || ''
+  @submission.country = params[:country] || ''
+  @submission.description1 = params[:description1] || ''
+  @submission.emailAddress = params[:emailAddress] || ''
+  @submission.firstName = params[:firstName] || ''
+  @submission.jobRole = params[:jobRole] || ''
+  @submission.lastName = params[:lastName] || ''
+  @submission.postal1 = params[:postal1] || ''
+  @submission.ukBoroughs = params[:ukBoroughs] || ''
+  @submission.usStates = params[:usStates] || ''
+
+  @submission.status =''
+  @submission.save
+
+  if @submission.country == 'United States'
+    submitted_sub_country = @submission.usStates
+  elsif @submission.country == 'Canada'
+    submitted_sub_country = @submission.caTerritories
+  else
+    submitted_sub_country = ''
+  end
+
+  if Geo.find_by(country: @submission.country, sub_country: submitted_sub_country, zip_code: @submission.postal1)
+    recipient = Geo.find_by(country: @submission.country, sub_country: submitted_sub_country, zip_code: @submission.postal1).recipient
+    territory = Geo.find_by(country: @submission.country, sub_country: submitted_sub_country, zip_code: @submission.postal1).territory.name
+  elsif Geo.find_by(country: @submission.country, sub_country: submitted_sub_country)
+    recipient = Geo.find_by(country: @submission.country, sub_country: submitted_sub_country).recipient
+    territory = Geo.find_by(country: @submission.country, sub_country: submitted_sub_country).territory.name
+  elsif Geo.find_by(country: @submission.country)
+    recipient = Geo.find_by(country: @submission.country).recipient
+    territory = Geo.find_by(country: @submission.country).territory.name
+  else
+    recipient = Geo.find_by(country: '').recipient
+    territory = 'none found'
+  end
+
+  @submission.recipient_id = recipient.id
+  @submission.status += 'territory: '+territory+', recipient: '+@submission.recipient.name+' - '+@submission.recipient.email
+  @submission.status += recipient.work_hours? ? ', during work hours' : ', outside of work hours'
+  @submission.save
+
+  #first_letter = @submission.emailAddress[0]
+  #if ('a'..'z').to_a.include?(first_letter)
+  # @submission.bdr = "Casey"
+  # notification_email = "casey@twilio.com"
+  #else
+  # @submission.bdr = "error"
+  # notification_email = "emerald@twilio.com"
+  #end
+
+  email_subject = 'New FSR Submission - '+@submission.company
+  
+  begin 
+    @sendgrid_client = SendGrid::Client.new(api_user: settings.sendgrid_api_user, api_key: settings.sendgrid_api_key)
+    @sendgrid_client.send(SendGrid::Mail.new(to: @submission.recipient.email, from: settings.email_from, subject: email_subject, text: @submission.email_message))
+    @submission.status += ', sent email'
+  rescue
+    @submission.status += ', error on sending email'
+  end
+  @submission.save
+
+  if recipient.work_hours?
+    if @submission.phone.is_blank?
+      @submission.status += ', no call made because phone number was blank'
+    else
+      @twilio_client = Twilio::REST::Client.new settings.twilio_account_sid, settings.twilio_auth_token
+      begin
+        @call = @twilio_client.calls.create(
+          from: settings.calls_sms_from,
+          to: @submission.recipient.phone,
+          url: @submission.twilio_gather_url,
+          method: 'GET'
+        ) 
+        @submission.status += ', call_made' 
+      rescue
+        @submission.status += ', error on making call'
+      end
+    end
+    @submission.save
+  end
+end
+
+get '/call_to_recipient' do
+  if params[:submission_id] 
+    @submission = Submission.find(params[:submission_id].to_i)
+
+    if params[:Digits].nil?
+      erb :'twiml/call', :layout => false
+    elsif params[:Digits] == '1'
+      @submission.status += ', connected call with client'
+      @submission.save
+      @recipient = @submission.recipient
+      erb :'twiml/connect_call', :layout => false
+    else
+      begin
+        @twilio_client = Twilio::REST::Client.new settings.twilio_account_sid, settings.twilio_auth_token
+        @twilio_client.messages.create(
+          from: settings.calls_sms_from,
+          to: @submission.recipient.phone,
+          body: @submission.sms_message
+        )
+        @submission.status += ', sent sms message'
+        @submission.save
+      rescue
+        @submission.status += ', error on sending sms'
+        @submission.save
+      end
+      erb :'twiml/end_call', :layout => false
+    end
+  end
+end
+
+get '/sign_in' do 
+  @title = 'Sign in'
+  erb :sign_in
+end
+
+post '/session' do 
+  user = User.find_by(email: params[:email].downcase)
+  if user && user.password == params[:password]
+    sign_in user
+    redirect to('/')
+  else
+    @alert = 'Invalid email/password combination'
+    redirect to('sign_in')
+  end
+end 
+
+delete '/session' do
+  session.clear
+  redirect to('/')
+end
+
+#changes need to have the correct permissions
+error 403 do
+  'Access forbidden'
+end
+
+post %r{.*} do
+  403 unless signed_in?
+  pass
+end
+
+get %r{.*} do 
+  redirect to('/sign_in') unless signed_in?
+  pass
+end
+
+get '/' do 
+  redirect to('/submissions')
+end
+
 get '/recipients' do
   @recipients = Recipient.all
   @active_area = 'recipients'
@@ -212,118 +430,4 @@ get '/submissions' do
   erb :submissions
 end
 
-post '/submissions' do 
-	@submission = Submission.new
-	@submission.all_params = params.to_s
-  @submission.busPhone = params[:busPhone] || ''
-  @submission.caTerritories = params[:caTerritories] || ''
-	@submission.company = params[:company] || ''
-  @submission.country = params[:country] || ''
-  @submission.description1 = params[:description1] || ''
-  @submission.emailAddress = params[:emailAddress] || ''
-  @submission.firstName = params[:firstName] || ''
-  @submission.jobRole = params[:jobRole] || ''
-  @submission.lastName = params[:lastName] || ''
-  @submission.postal1 = params[:postal1] || ''
-  @submission.ukBoroughs = params[:ukBoroughs] || ''
-  @submission.usStates = params[:usStates] || ''
 
-  @submission.status =''
-  @submission.save
-
-  if @submission.country == 'United States'
-    submitted_sub_country = @submission.usStates
-  elsif @submission.country == 'Canada'
-    submitted_sub_country = @submission.caTerritories
-  else
-    submitted_sub_country = ''
-  end
-
-  if Geo.find_by(country: @submission.country, sub_country: submitted_sub_country, zip_code: @submission.postal1)
-    recipient = Geo.find_by(country: @submission.country, sub_country: submitted_sub_country, zip_code: @submission.postal1).recipient
-    territory = Geo.find_by(country: @submission.country, sub_country: submitted_sub_country, zip_code: @submission.postal1).territory.name
-  elsif Geo.find_by(country: @submission.country, sub_country: submitted_sub_country)
-    recipient = Geo.find_by(country: @submission.country, sub_country: submitted_sub_country).recipient
-    territory = Geo.find_by(country: @submission.country, sub_country: submitted_sub_country).territory.name
-  elsif Geo.find_by(country: @submission.country)
-    recipient = Geo.find_by(country: @submission.country).recipient
-    territory = Geo.find_by(country: @submission.country).territory.name
-  else
-    recipient = Geo.find_by(country: '').recipient
-    territory = 'none found'
-  end
-
-  @submission.recipient_id = recipient.id
-  @submission.status += 'territory: '+territory+', recipient: '+@submission.recipient.name+' - '+@submission.recipient.email
-  @submission.status += recipient.work_hours? ? ', during work hours' : ', outside of work hours'
-  @submission.save
-
-  #first_letter = @submission.emailAddress[0]
-  #if ('a'..'z').to_a.include?(first_letter)
-  #	@submission.bdr = "Casey"
-  #	notification_email = "casey@twilio.com"
-  #else
-  #	@submission.bdr = "error"
-  #	notification_email = "emerald@twilio.com"
-  #end
-
-  email_subject = 'New FSR Submission - '+@submission.company
-  
-  begin 
-	  @sendgrid_client = SendGrid::Client.new(api_user: settings.sendgrid_api_user, api_key: settings.sendgrid_api_key)
-	  @sendgrid_client.send(SendGrid::Mail.new(to: @submission.recipient.email, from: settings.email_from, subject: email_subject, text: @submission.email_message))
-	  @submission.status += ', sent email'
-  rescue
-  	@submission.status += ', error on sending email'
-  end
-  @submission.save
-
-  if recipient.work_hours?
-    unless @submission.phone
-      @submission.status += ', no call made because phone number invalid'
-    else
-      @twilio_client = Twilio::REST::Client.new settings.twilio_account_sid, settings.twilio_auth_token
-      begin
-        @call = @twilio_client.calls.create(
-          from: settings.calls_sms_from,
-          to: @submission.recipient.phone,
-          url: @submission.twilio_gather_url,
-          method: 'GET'
-        ) 
-        @submission.status += ', call_made' 
-      rescue
-        @submission.status += ', error on making call'
-      end
-    end
-    @submission.save
-  end
-end
-
-get '/call_to_recipient' do
-  if params[:submission_id] 
-    @submission = Submission.find(params[:submission_id].to_i)
-
-    if params[:Digits].nil?
-      erb :'twiml/call', :layout => false
-    elsif params[:Digits] == '1'
-      @submission.status += ', connected call with client'
-      @submission.save
-      erb :'twiml/connect_call', :layout => false
-    else
-      begin
-        @twilio_client = Twilio::REST::Client.new settings.twilio_account_sid, settings.twilio_auth_token
-        @twilio_client.messages.create(
-          from: settings.calls_sms_from,
-          to: @submission.recipient.phone,
-          body: @submission.sms_message
-        )
-        @submission.status += ', sent sms message'
-        @submission.save
-      rescue
-        @submission.status += ', error on sending sms'
-        @submission.save
-      end
-      erb :'twiml/end_call', :layout => false
-    end
-  end
-end

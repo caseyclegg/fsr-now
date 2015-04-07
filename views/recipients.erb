@@ -8,7 +8,7 @@
   <tr>
     <td><%= recipient.name %></td>
     <td><%= recipient.email %></td>
-    <td><%= recipient.phone.pretty_phone %></td>
+    <td><%= Phonelib.parse(recipient.phone).national %></td>
     <td><%= recipient.hours %></td>
     <td><a href='/recipients/<%= recipient.id %>/edit'>Edit</a></td>
  	</tr>

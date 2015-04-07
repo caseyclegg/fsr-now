@@ -10,7 +10,7 @@
 			    <td><%= submission.company %></td>
 			    <td><%= submission.name %></td>
 			    <td><%= submission.emailAddress %></td>
-			    <td><%= submission.phone.pretty_phone %></td>
+			    <td><%= Phonelib.parse(submission.phone).national %></td>
 			    <td><%= submission.description1 %></td>
 			    <td><%= submission.status %></td>
 			 	</tr>

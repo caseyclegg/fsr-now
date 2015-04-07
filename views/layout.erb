@@ -36,7 +36,11 @@
               <li<% if @active_area == 'territories' then %> class="active"<% end %>><a href="/territories">Territories</a></li>
               <li<% if @active_area == 'geos' then %> class="active"<% end %>><a href="/geos">Geos</a></li>
             </ul>
+            <ul class="nav navbar-nav navbar-right">
+              <li><a onclick='document.getElementById("sign_out").submit();'>Log out</a></li>
+            </ul>
         </div>
+        <form id='sign_out' action='/session' method='post'><input name='_method' type='hidden' value='delete' /></form>
       </div><!-- /.container-fluid -->
     </nav>
     <%= yield %>

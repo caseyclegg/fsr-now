@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20150328160139) do
+ActiveRecord::Schema.define(version: 20150401225954) do
 
   create_table "geos", force: :cascade do |t|
     t.string   "country"
@@ -64,5 +64,16 @@ ActiveRecord::Schema.define(version: 20150328160139) do
   end
 
   add_index "territories", ["recipient_id"], name: "index_territories_on_recipient_id"
+
+  create_table "users", force: :cascade do |t|
+    t.string   "email"
+    t.string   "password"
+    t.string   "remember_token"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+  end
+
+  add_index "users", ["email"], name: "index_users_on_email", unique: true
+  add_index "users", ["remember_token"], name: "index_users_on_remember_token"
 
 end

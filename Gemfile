@@ -7,6 +7,7 @@ gem "sinatra-activerecord"
 gem "twilio-ruby"
 gem 'bcrypt-ruby', '~> 3.0.0'
 gem 'sendgrid-ruby'
+gem 'phonelib'
 
 group :development do
   gem "sqlite3"
