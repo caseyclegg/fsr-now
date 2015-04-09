@@ -8,6 +8,7 @@ configure do
   enable :sessions
   set :session_secret, 'nick is the man'
   Phonelib.default_country = "US"
+  set :routing_logic, 'alphabetical'
 end
 
 configure :development do
@@ -83,6 +84,7 @@ end
 class Geo < ActiveRecord::Base
   belongs_to :territory
   has_one :recipient, :through => :territory
+  validates :starting_letter, format: { with: /\A[a-z]?\z/ }
 end
 
 class Territory < ActiveRecord::Base
@@ -206,41 +208,43 @@ post '/submissions' do
   @submission.status =''
   @submission.save
 
-  if @submission.country == 'United States'
-    submitted_sub_country = @submission.usStates
-  elsif @submission.country == 'Canada'
-    submitted_sub_country = @submission.caTerritories
-  else
-    submitted_sub_country = ''
-  end
+  if settings.routing_logic == 'geographic'
+    if @submission.country == 'United States'
+      submitted_sub_country = @submission.usStates
+    elsif @submission.country == 'Canada'
+      submitted_sub_country = @submission.caTerritories
+    else
+      submitted_sub_country = ''
+    end
 
-  if Geo.find_by(country: @submission.country, sub_country: submitted_sub_country, zip_code: @submission.postal1)
-    recipient = Geo.find_by(country: @submission.country, sub_country: submitted_sub_country, zip_code: @submission.postal1).recipient
-    territory = Geo.find_by(country: @submission.country, sub_country: submitted_sub_country, zip_code: @submission.postal1).territory.name
-  elsif Geo.find_by(country: @submission.country, sub_country: submitted_sub_country)
-    recipient = Geo.find_by(country: @submission.country, sub_country: submitted_sub_country).recipient
-    territory = Geo.find_by(country: @submission.country, sub_country: submitted_sub_country).territory.name
-  elsif Geo.find_by(country: @submission.country)
-    recipient = Geo.find_by(country: @submission.country).recipient
-    territory = Geo.find_by(country: @submission.country).territory.name
-  else
-    recipient = Geo.find_by(country: '').recipient
-    territory = 'none found'
+    if Geo.find_by(country: @submission.country, sub_country: submitted_sub_country, zip_code: @submission.postal1)
+      recipient = Geo.find_by(country: @submission.country, sub_country: submitted_sub_country, zip_code: @submission.postal1).recipient
+      territory = Geo.find_by(country: @submission.country, sub_country: submitted_sub_country, zip_code: @submission.postal1).territory.name
+    elsif Geo.find_by(country: @submission.country, sub_country: submitted_sub_country)
+      recipient = Geo.find_by(country: @submission.country, sub_country: submitted_sub_country).recipient
+      territory = Geo.find_by(country: @submission.country, sub_country: submitted_sub_country).territory.name
+    elsif Geo.find_by(country: @submission.country)
+      recipient = Geo.find_by(country: @submission.country).recipient
+      territory = Geo.find_by(country: @submission.country).territory.name
+    else
+      recipient = Geo.find_by(country: '').recipient
+      territory = 'none found'
+    end
+  elsif settings.routing_logic == 'alphabetical'
+    first_email_letter = @submission.emailAddress[0]
+    if Geo.find_by(starting_letter: first_email_letter)
+      recipient = Geo.find_by(starting_letter: first_email_letter).recipient
+      territory = Geo.find_by(starting_letter: first_email_letter).territory.name
+    else
+      recipient = Geo.find_by(starting_letter: '').recipient
+      territory = Geo.find_by(starting_letter: '').territory.name
+    end
   end
 
   @submission.recipient_id = recipient.id
   @submission.status += 'territory: '+territory+', recipient: '+@submission.recipient.name+' - '+@submission.recipient.email
   @submission.status += recipient.work_hours? ? ', during work hours' : ', outside of work hours'
   @submission.save
-
-  #first_letter = @submission.emailAddress[0]
-  #if ('a'..'z').to_a.include?(first_letter)
-  # @submission.bdr = "Casey"
-  # notification_email = "casey@twilio.com"
-  #else
-  # @submission.bdr = "error"
-  # notification_email = "emerald@twilio.com"
-  #end
 
   email_subject = 'New FSR Submission - '+@submission.company
   
@@ -383,7 +387,7 @@ post '/recipients' do
 end
 
 get '/territories' do
-  @territories = Territory.all
+  @territories = Territory.where(routing_type: settings.routing_logic)
   @recipients = Recipient.all
   @active_area = 'territories'
   erb :territories
@@ -398,6 +402,7 @@ end
 
 put '/territories/:id' do
   @territory = Territory.find(params[:id])
+  @territory.starting_letter = params[:starting_letter]
   @territory.recipient_id = params[:recipient_id]
   @territory.save
   redirect to('/territories')
@@ -407,13 +412,18 @@ post '/territories' do
   @territory = Territory.new
   @territory.name = params[:name]
   @territory.recipient_id = params[:recipient_id]
+  @territory.routing_type = settings.routing_logic
   @territory.save
   redirect to('/territories')
 end
 
 get '/geos' do
-  @geos = Geo.all.order('area, country, sub_country, zip_code')
-  @territories = Territory.all
+  if settings.routing_logic == 'geographic'
+    @geos = Geo.where(starting_letter: nil).order('area, country, sub_country, zip_code')
+  else
+    @geos = Geo.where.not(starting_letter: nil).order('starting_letter')
+  end
+  @territories = Territory.where(routing_type: settings.routing_logic)
   @active_area = 'geos'
   erb :geos
 end
@@ -427,7 +437,7 @@ end
 
 get '/submissions' do
   @submissions = Submission.all.order('created_at DESC')
+  @active_area = 'submissions'
   erb :submissions
 end
-
 

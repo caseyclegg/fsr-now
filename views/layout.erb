@@ -34,7 +34,7 @@
               <li<% if @active_area == 'submissions' then %> class="active"<% end %>><a href="/submissions">Submissions</a></li>
               <li<% if @active_area == 'recipients' then %> class="active"<% end %>><a href="/recipients">Recipients</a></li>
               <li<% if @active_area == 'territories' then %> class="active"<% end %>><a href="/territories">Territories</a></li>
-              <li<% if @active_area == 'geos' then %> class="active"<% end %>><a href="/geos">Geos</a></li>
+              <li<% if @active_area == 'geos' then %> class="active"<% end %>><a href="/geos"><%= settings.routing_logic=='geographic' ? 'Geos' : 'Letters' %></a></li>
             </ul>
             <ul class="nav navbar-nav navbar-right">
               <li><a onclick='document.getElementById("sign_out").submit();'>Log out</a></li>

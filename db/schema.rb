@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20150401225954) do
+ActiveRecord::Schema.define(version: 20150407210046) do
 
   create_table "geos", force: :cascade do |t|
     t.string   "country"
@@ -21,6 +21,7 @@ ActiveRecord::Schema.define(version: 20150401225954) do
     t.integer  "territory_id"
     t.datetime "created_at"
     t.datetime "updated_at"
+    t.string   "starting_letter"
   end
 
   add_index "geos", ["territory_id"], name: "index_geos_on_territory_id"
@@ -61,6 +62,7 @@ ActiveRecord::Schema.define(version: 20150401225954) do
     t.integer  "recipient_id"
     t.datetime "created_at"
     t.datetime "updated_at"
+    t.string   "routing_type"
   end
 
   add_index "territories", ["recipient_id"], name: "index_territories_on_recipient_id"
