@@ -302,5 +302,19 @@ all_geos = [
 ]
 
 all_geos.each do |geo|
-	Geo.create(country: geo[0], sub_country: geo[1], zip_code: geo[2], area: geo[3])
+	Geo.create(country: geo[0], sub_country: geo[1], zip_code: geo[2], area: geo[3], routing_type: 'geographic')
 end
+
+all_letters = ['']
+('a'..'z').each { |letter| all_letters << letter }
+
+all_letters.each do |geo|
+	Geo.create(starting_letter: geo, routing_type: 'alphabetical')
+end
+
+
+User.create(email: 'casey@twilio.com', password: 'password')
+User.create(email: 'nick@twilio.com', password: 'twilio098')
+User.create(email: 'emerald@twilio.com', password: 'twilio098')
+
+
