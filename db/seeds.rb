@@ -302,14 +302,14 @@ all_geos = [
 ]
 
 all_geos.each do |geo|
-	Geo.create(country: geo[0], sub_country: geo[1], zip_code: geo[2], area: geo[3], routing_type: 'geographic')
+	Geo.create(country: geo[0], sub_country: geo[1], zip_code: geo[2], area: geo[3])
 end
 
 all_letters = ['']
 ('a'..'z').each { |letter| all_letters << letter }
 
 all_letters.each do |geo|
-	Geo.create(starting_letter: geo, routing_type: 'alphabetical')
+	Geo.create(starting_letter: geo)
 end
 
 
