@@ -16,7 +16,7 @@ class CreateRecipients < ActiveRecord::Migration
 			t.string :usStates
 			t.string :recipient_id
 			t.string :status
-			t.timestamps
+			t.timestamps null: false
   	end
   	add_index :submissions, :recipient_id
 
@@ -25,7 +25,7 @@ class CreateRecipients < ActiveRecord::Migration
 			t.string :email
 			t.string :phone
 			t.string :hours
-			t.timestamps
+			t.timestamps null: false
   	end
 
   	create_table :geos do |t|
@@ -34,14 +34,14 @@ class CreateRecipients < ActiveRecord::Migration
   		t.string :zip_code
   		t.string :area
   		t.integer :territory_id
-			t.timestamps
+			t.timestamps null: false
   	end
   	add_index :geos, :territory_id
   	
   	create_table :territories do |t|
   		t.string :name
   		t.integer :recipient_id
-			t.timestamps
+			t.timestamps null: false
   	end
   	add_index :territories, :recipient_id
   end
