@@ -400,9 +400,16 @@ get '/territories/new' do
   erb :territory_new
 end
 
+get '/territories/:id/edit' do
+  @territory = Territory.find(params[:id])
+  @recipients = Recipient.all
+  @active_area = 'territories'
+  erb :territory_edit
+end
+
 put '/territories/:id' do
   @territory = Territory.find(params[:id])
-  @territory.starting_letter = params[:starting_letter]
+  @territory.name = params[:name]
   @territory.recipient_id = params[:recipient_id]
   @territory.save
   redirect to('/territories')
