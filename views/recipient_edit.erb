@@ -35,4 +35,10 @@
   </div>
 <input class="btn btn-default" type="submit" value="Save">
 </form>
+<p>
+<form action='/recipients/<%= @recipient.id.to_s %>' method='post'>
+  <input type="hidden" name="_method" value="delete">
+  <button type="submit" class="btn btn-danger btn-xs" onclick="return confirm('Are you sure you want to delete this recipient?');">Delete Recipient</button>
+</form>
+</p>
 </div></div></div>

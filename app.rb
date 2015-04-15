@@ -3,6 +3,7 @@ require 'sinatra/activerecord'
 require 'twilio-ruby'
 require 'sendgrid-ruby'
 require 'phonelib'
+require 'csv'
 
 configure do 
   enable :sessions
@@ -36,8 +37,8 @@ configure :production do
 	)
   set :sendgrid_api_user, ENV['SENDGRID_API_USER']
   set :sendgrid_api_key, ENV['SENDGRID_API_KEY']
-  set :twilio_account_sid, ENV['TWILIO_ACCOUNT_SID'] ||'ACccf36b345e29dd57b9c0eee6fe1313c6'
-  set :twilio_auth_token, ENV['TWILIO_AUTH_TOKEN'] || '1f5de95513ae08c8c6fd4a8babe68457'
+  set :twilio_account_sid, ENV['TWILIO_ACCOUNT_SID']
+  set :twilio_auth_token, ENV['TWILIO_AUTH_TOKEN']
   set :base_url, ENV['BASE_URL']
   set :email_from, ENV['EMAILS_FROM']
   set :calls_sms_from, ENV['CALLS_SMS_FROM']
@@ -196,7 +197,7 @@ post '/submissions' do
   @submission.caTerritories = params[:caTerritories] || ''
   @submission.company = params[:company] || ''
   @submission.country = params[:country] || ''
-  @submission.description1 = params[:description1] || ''
+  @submission.description1 = params[:paragraphText2] || ''
   @submission.emailAddress = params[:emailAddress] || ''
   @submission.firstName = params[:firstName] || ''
   @submission.jobRole = params[:jobRole] || ''
@@ -349,7 +350,7 @@ get '/' do
 end
 
 get '/recipients' do
-  @recipients = Recipient.all
+  @recipients = Recipient.all.order('name')
   @active_area = 'recipients'
   erb :recipients
 end
@@ -376,6 +377,12 @@ put '/recipients/:id' do
   redirect to('/recipients')
 end
 
+delete '/recipients/:id' do
+  @recipient = Recipient.find(params[:id])
+  @recipient.destroy
+  redirect to('/recipients')
+end
+
 post '/recipients' do
   @recipient = Recipient.new
   @recipient.name = params[:name]
@@ -387,7 +394,7 @@ post '/recipients' do
 end
 
 get '/territories' do
-  @territories = Territory.where(routing_type: settings.routing_logic)
+  @territories = Territory.where(routing_type: settings.routing_logic).order('name')
   @recipients = Recipient.all
   @active_area = 'territories'
   erb :territories
@@ -442,9 +449,16 @@ put '/geos/:id' do
   redirect to('/geos')
 end
 
-get '/submissions' do
+get '/submissions.?:format?' do
   @submissions = Submission.all.order('created_at DESC')
-  @active_area = 'submissions'
-  erb :submissions
+  if params[:format]=='csv'
+    headers \
+      'Content-Disposition' => "attachment; filename=\"fsr-submission.csv\"", 
+      'Content-Type' =>'text/csv'
+    erb :'submission_log_dump.csv', :layout => false
+  else
+    @active_area = 'submissions'
+    erb :submissions
+  end
 end
 

@@ -48,7 +48,7 @@ ActiveRecord::Schema.define(version: 20150407210046) do
     t.string   "lastName"
     t.string   "postal1"
     t.string   "ukBoroughs"
-    t.string   "usStates"
+    t.string   "ukBoroughs"
     t.string   "recipient_id"
     t.string   "status"
     t.datetime "created_at"
