@@ -3,12 +3,13 @@
 <div class="col-md-12">
 <h1>Recipients</h1>
 <table class="table table-striped">
-<tr><th>Name</th><th>Email</th><th>Phone</th><th>Hours</th><th>&nbsp;</th></tr>
+<tr><th>Name</th><th>Email</th><th>Cell Phone</th><th>Work Phone</th><th>Hours</th><th>&nbsp;</th></tr>
 <% @recipients.each do |recipient| %>
   <tr>
     <td><%= recipient.name %></td>
     <td><%= recipient.email %></td>
     <td><%= Phonelib.parse(recipient.phone).national %></td>
+    <td><%= Phonelib.parse(recipient.work_phone).national %></td>
     <td><%= recipient.hours %></td>
     <td><a href='/recipients/<%= recipient.id %>/edit'>Edit</a></td>
  	</tr>

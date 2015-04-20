@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20150407210046) do
+ActiveRecord::Schema.define(version: 20150420232521) do
 
   create_table "geos", force: :cascade do |t|
     t.string   "country"
@@ -33,6 +33,7 @@ ActiveRecord::Schema.define(version: 20150407210046) do
     t.string   "hours"
     t.datetime "created_at"
     t.datetime "updated_at"
+    t.string   "work_phone"
   end
 
   create_table "submissions", force: :cascade do |t|
@@ -48,7 +49,7 @@ ActiveRecord::Schema.define(version: 20150407210046) do
     t.string   "lastName"
     t.string   "postal1"
     t.string   "ukBoroughs"
-    t.string   "ukBoroughs"
+    t.string   "usStates"
     t.string   "recipient_id"
     t.string   "status"
     t.datetime "created_at"

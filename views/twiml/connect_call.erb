@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Response>
-	<Dial callerId="<%= @recipient.phone %>" action="<%= @submission.twilio_gather_url %>" method="GET">
+	<Dial callerId="<%=  @recipient.work_phone.is_blank? ? @recipient.phone : @recipient.work_phone %>" action="<%= @submission.twilio_gather_url %>" method="GET">
 		<Number><%= @submission.phone %></Number>
 	</Dial>
 </Response>

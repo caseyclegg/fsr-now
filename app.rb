@@ -372,6 +372,7 @@ put '/recipients/:id' do
   @recipient.name = params[:name]
   @recipient.email = params[:email]
   @recipient.phone = params[:phone].intl_phone
+  @recipient.work_phone = params[:work_phone].intl_phone
   @recipient.hours = params[:hours]
   @recipient.save
   redirect to('/recipients')
@@ -388,6 +389,7 @@ post '/recipients' do
   @recipient.name = params[:name]
   @recipient.email = params[:email]
   @recipient.phone = params[:phone].intl_phone
+  @recipient.work_phone = params[:work_phone].intl_phone
   @recipient.hours = params[:hours]
   @recipient.save
   redirect to('/recipients')
