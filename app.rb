@@ -111,7 +111,7 @@ class Recipient < ActiveRecord::Base
       else -7
       end
     now = Time.now.getgm+offset*60*60
-    work_hours = true if now >= Time.new(Time.now.year,Time.now.month,Time.now.day,8,0,0,0) && now <= Time.new(Time.now.year,Time.now.month,Time.now.day,18,0,0,0)
+    work_hours = true if now >= Time.new(Time.now.year,Time.now.month,Time.now.day,9,0,0,0) && now <= Time.new(Time.now.year,Time.now.month,Time.now.day,17,0,0,0)
     return work_hours
   end
 end
