@@ -7,7 +7,7 @@
 			<tr><th>Date</th><th>Company</th><th>Name</th><th>Email</th><th>Phone</th><th>Description</th><th>Status</th></tr>
 			<% @submissions.each do |submission| %>
 			  <tr>
-			    <td><%= submission.created_at.localtime %></td>
+			    <td><%= (submission.created_at - 7*60*60).strftime "%Y-%m-%d %l:%M:%S %P" %></td>
 			    <td><%= submission.company %></td>
 			    <td><%= submission.name %></td>
 			    <td><%= submission.emailAddress %></td>
