@@ -7,7 +7,7 @@
 <% @territories.each do |territory| %>
   <tr>
   	<td><%= territory.name %></td>
-    <td><%= territory.recipient.name %></td>
+    <td><%= territory.recipient.name if territory.recipient %></td>
 		<td><a href="/territories/<%= territory.id %>/edit">Edit</a></td>
  	</tr>
 <% end %>

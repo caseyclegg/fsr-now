@@ -397,7 +397,6 @@ end
 
 get '/territories' do
   @territories = Territory.where(routing_type: settings.routing_logic).order('name')
-  @recipients = Recipient.all
   @active_area = 'territories'
   erb :territories
 end
