@@ -314,7 +314,5 @@ end
 
 
 User.create(email: 'casey@twilio.com', password: 'password')
-User.create(email: 'nick@twilio.com', password: 'twilio098')
-User.create(email: 'emerald@twilio.com', password: 'twilio098')
 
 

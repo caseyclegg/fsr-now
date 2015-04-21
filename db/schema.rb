@@ -19,8 +19,8 @@ ActiveRecord::Schema.define(version: 20150420232521) do
     t.string   "zip_code"
     t.string   "area"
     t.integer  "territory_id"
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at",      null: false
+    t.datetime "updated_at",      null: false
     t.string   "starting_letter"
   end
 
@@ -31,8 +31,8 @@ ActiveRecord::Schema.define(version: 20150420232521) do
     t.string   "email"
     t.string   "phone"
     t.string   "hours"
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
     t.string   "work_phone"
   end
 
@@ -52,8 +52,8 @@ ActiveRecord::Schema.define(version: 20150420232521) do
     t.string   "usStates"
     t.string   "recipient_id"
     t.string   "status"
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at",    null: false
+    t.datetime "updated_at",    null: false
   end
 
   add_index "submissions", ["recipient_id"], name: "index_submissions_on_recipient_id"
@@ -61,8 +61,8 @@ ActiveRecord::Schema.define(version: 20150420232521) do
   create_table "territories", force: :cascade do |t|
     t.string   "name"
     t.integer  "recipient_id"
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at",   null: false
+    t.datetime "updated_at",   null: false
     t.string   "routing_type"
   end
 
@@ -72,8 +72,8 @@ ActiveRecord::Schema.define(version: 20150420232521) do
     t.string   "email"
     t.string   "password"
     t.string   "remember_token"
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at",     null: false
+    t.datetime "updated_at",     null: false
   end
 
   add_index "users", ["email"], name: "index_users_on_email", unique: true
