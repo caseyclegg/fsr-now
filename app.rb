@@ -232,7 +232,7 @@ post '/submissions' do
       territory = 'none found'
     end
   elsif settings.routing_logic == 'alphabetical'
-    first_email_letter = @submission.emailAddress[0]
+    first_email_letter = @submission.emailAddress[0].downcase
     if Geo.find_by(starting_letter: first_email_letter)
       recipient = Geo.find_by(starting_letter: first_email_letter).recipient
       territory = Geo.find_by(starting_letter: first_email_letter).territory.name
