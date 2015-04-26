@@ -51,6 +51,14 @@ class Submission < ActiveRecord::Base
     return self.firstName+' '+self.lastName
   end
 
+  def email
+    if /\A[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}+(\.[A-Z]{2,4})?\z/.match(self.emailAddress)
+      return self.emailAddress.downcase
+    else
+      return nil
+    end
+  end
+
   def message
     the_message = 'You have a new FSR submission, please reach out '
     the_message += self.recipient.work_hours? ? 'within the next hour.' : 'as soon as possible.'
@@ -77,7 +85,11 @@ class Submission < ActiveRecord::Base
   end
 
   def phone
-    Phonelib.parse(self.busPhone).e164
+    if Phonelib.valid?(self.busPhone)
+      return Phonelib.parse(self.busPhone).e164
+    else
+      return nil
+    end
   end
 
 end
@@ -112,6 +124,7 @@ class Recipient < ActiveRecord::Base
       end
     now = Time.now.getgm+offset*60*60
     work_hours = true if now >= Time.new(Time.now.year,Time.now.month,Time.now.day,9,0,0,0) && now <= Time.new(Time.now.year,Time.now.month,Time.now.day,17,0,0,0)
+    work_hours = false if now.saturday? || now.sunday?
     return work_hours
   end
 end
@@ -209,73 +222,78 @@ post '/submissions' do
   @submission.status =''
   @submission.save
 
-  if settings.routing_logic == 'geographic'
-    if @submission.country == 'United States'
-      submitted_sub_country = @submission.usStates
-    elsif @submission.country == 'Canada'
-      submitted_sub_country = @submission.caTerritories
-    else
-      submitted_sub_country = ''
-    end
+  if @submission.email.nil?
+    @submission.status += 'email address invalid, lead not assigned'
+    @submission.save
+  else
+    if settings.routing_logic == 'geographic'
+      if @submission.country == 'United States'
+        submitted_sub_country = @submission.usStates
+      elsif @submission.country == 'Canada'
+        submitted_sub_country = @submission.caTerritories
+      else
+        submitted_sub_country = ''
+      end
 
-    if Geo.find_by(country: @submission.country, sub_country: submitted_sub_country, zip_code: @submission.postal1)
-      recipient = Geo.find_by(country: @submission.country, sub_country: submitted_sub_country, zip_code: @submission.postal1).recipient
-      territory = Geo.find_by(country: @submission.country, sub_country: submitted_sub_country, zip_code: @submission.postal1).territory.name
-    elsif Geo.find_by(country: @submission.country, sub_country: submitted_sub_country)
-      recipient = Geo.find_by(country: @submission.country, sub_country: submitted_sub_country).recipient
-      territory = Geo.find_by(country: @submission.country, sub_country: submitted_sub_country).territory.name
-    elsif Geo.find_by(country: @submission.country)
-      recipient = Geo.find_by(country: @submission.country).recipient
-      territory = Geo.find_by(country: @submission.country).territory.name
-    else
-      recipient = Geo.find_by(country: '').recipient
-      territory = 'none found'
-    end
-  elsif settings.routing_logic == 'alphabetical'
-    first_email_letter = @submission.emailAddress[0].downcase
-    if Geo.find_by(starting_letter: first_email_letter)
-      recipient = Geo.find_by(starting_letter: first_email_letter).recipient
-      territory = Geo.find_by(starting_letter: first_email_letter).territory.name
-    else
-      recipient = Geo.find_by(starting_letter: '').recipient
-      territory = Geo.find_by(starting_letter: '').territory.name
-    end
-  end
-
-  @submission.recipient_id = recipient.id
-  @submission.status += 'territory: '+territory+', recipient: '+@submission.recipient.name+' - '+@submission.recipient.email
-  @submission.status += recipient.work_hours? ? ', during work hours' : ', outside of work hours'
-  @submission.save
-
-  email_subject = 'New FSR Submission - '+@submission.company
-  
-  begin 
-    @sendgrid_client = SendGrid::Client.new(api_user: settings.sendgrid_api_user, api_key: settings.sendgrid_api_key)
-    @sendgrid_client.send(SendGrid::Mail.new(to: @submission.recipient.email, from: settings.email_from, subject: email_subject, text: @submission.email_message))
-    @submission.status += ', sent email'
-  rescue
-    @submission.status += ', error on sending email'
-  end
-  @submission.save
-
-  if recipient.work_hours?
-    if @submission.phone.is_blank?
-      @submission.status += ', no call made because phone number was blank'
-    else
-      @twilio_client = Twilio::REST::Client.new settings.twilio_account_sid, settings.twilio_auth_token
-      begin
-        @call = @twilio_client.calls.create(
-          from: settings.calls_sms_from,
-          to: @submission.recipient.phone,
-          url: @submission.twilio_gather_url,
-          method: 'GET'
-        ) 
-        @submission.status += ', call_made' 
-      rescue
-        @submission.status += ', error on making call'
+      if Geo.find_by(country: @submission.country, sub_country: submitted_sub_country, zip_code: @submission.postal1)
+        recipient = Geo.find_by(country: @submission.country, sub_country: submitted_sub_country, zip_code: @submission.postal1).recipient
+        territory = Geo.find_by(country: @submission.country, sub_country: submitted_sub_country, zip_code: @submission.postal1).territory.name
+      elsif Geo.find_by(country: @submission.country, sub_country: submitted_sub_country)
+        recipient = Geo.find_by(country: @submission.country, sub_country: submitted_sub_country).recipient
+        territory = Geo.find_by(country: @submission.country, sub_country: submitted_sub_country).territory.name
+      elsif Geo.find_by(country: @submission.country)
+        recipient = Geo.find_by(country: @submission.country).recipient
+        territory = Geo.find_by(country: @submission.country).territory.name
+      else
+        recipient = Geo.find_by(country: '').recipient
+        territory = 'none found'
+      end
+    elsif settings.routing_logic == 'alphabetical'
+      first_email_letter = @submission.email[0]
+      if Geo.find_by(starting_letter: first_email_letter)
+        recipient = Geo.find_by(starting_letter: first_email_letter).recipient
+        territory = Geo.find_by(starting_letter: first_email_letter).territory.name
+      else
+        recipient = Geo.find_by(starting_letter: '').recipient
+        territory = Geo.find_by(starting_letter: '').territory.name
       end
     end
+
+    @submission.recipient_id = recipient.id
+    @submission.status += 'territory: '+territory+', recipient: '+@submission.recipient.name+' - '+@submission.recipient.email
+    @submission.status += recipient.work_hours? ? ', during work hours' : ', outside of work hours'
     @submission.save
+
+    email_subject = 'New FSR Submission - '+@submission.company
+  
+    begin 
+      @sendgrid_client = SendGrid::Client.new(api_user: settings.sendgrid_api_user, api_key: settings.sendgrid_api_key)
+      @sendgrid_client.send(SendGrid::Mail.new(to: @submission.recipient.email, from: settings.email_from, subject: email_subject, text: @submission.email_message))
+      @submission.status += ', sent email'
+    rescue
+      @submission.status += ', error on sending email'
+    end
+    @submission.save
+
+    if recipient.work_hours?
+      if @submission.phone.nil?
+        @submission.status += ', no call made because phone number was blank or invalid'
+      else
+        @twilio_client = Twilio::REST::Client.new settings.twilio_account_sid, settings.twilio_auth_token
+        begin
+          @call = @twilio_client.calls.create(
+            from: settings.calls_sms_from,
+            to: @submission.recipient.phone,
+            url: @submission.twilio_gather_url,
+            method: 'GET'
+          ) 
+          @submission.status += ', call_made' 
+        rescue
+          @submission.status += ', error on making call'
+        end
+      end
+      @submission.save
+    end
   end
 end
 
