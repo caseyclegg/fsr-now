@@ -221,7 +221,7 @@ post '/submissions' do
 
   @submission.status =''
 
-  unless Submission.where(emailAddress: @submission.emailAddress).where('created_at > ?', Time.now - 3600).empty?
+  if Submission.where(emailAddress: @submission.emailAddress).where('created_at > ?', Time.now - 3600).empty?
     @submission.save
 
     if @submission.email.nil?
