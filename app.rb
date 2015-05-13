@@ -49,15 +49,23 @@ class Submission < ActiveRecord::Base
   belongs_to :recipient
 
   def name
-    return self.firstName+' '+self.lastName
+    return URI.unescape(self.firstName)+' '+URI.unescape(self.lastName)
   end
 
   def email
-    if /\A[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}+(\.[A-Z]{2,4})?\z/.match(self.emailAddress)
-      return self.emailAddress.downcase
+    if /\A[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}+(\.[A-Z]{2,4})?\z/.match(URI.unescape(self.emailAddress))
+      return URI.unescape(self.emailAddress).downcase
     else
       return nil
     end
+  end
+
+  def company_name
+    return URI.unescape(self.company || '')
+  end
+
+  def description
+    return URI.unescape(self.description1 || '')
   end
 
   def message

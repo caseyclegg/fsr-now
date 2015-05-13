@@ -8,11 +8,11 @@
 			<% @submissions.each do |submission| %>
 			  <tr>
 			    <td><%= (submission.created_at.getgm - 7*60*60).strftime "%Y-%m-%d %l:%M:%S %P" %></td>
-			    <td><%= URI.unescape(submission.company) %></td>
-			    <td><%= URI.unescape(submission.name) %></td>
-			    <td><%= submission.emailAddress %></td>
+			    <td><%= submission.company_name %></td>
+			    <td><%= submission.name %></td>
+			    <td><%= submission.email %></td>
 			    <td><%= Phonelib.parse(submission.phone).national %></td>
-			    <td><%= URI.unescape(submission.description1) %></td>
+			    <td><%= submission.description %></td>
 			    <td><%= submission.status %></td>
 			 	</tr>
 			<% end %>

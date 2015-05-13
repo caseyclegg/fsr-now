@@ -1,4 +1,4 @@
-<%= CSV.generate_line(['id', 'firstName', 'lastName', 'jobRole', 'company', 'emailAddress', 'busPhone', 'country', 'usStates', 'caTerritories', 'ukBoroughs', 'postal1', 'description1', 'status', 'created_at']) %>
+<%= CSV.generate_line(['id', 'name', 'jobRole', 'company', 'emailAddress', 'busPhone', 'country', 'usStates', 'caTerritories', 'ukBoroughs', 'postal1', 'description1', 'status', 'created_at']) %>
 <% @submissions.each do |submission| %>
-  <%= CSV.generate_line([submission.id, submission.firstName, submission.lastName, submission.jobRole, submission.company, submission.emailAddress, submission.busPhone, submission.country, submission.usStates, submission.caTerritories, submission.ukBoroughs, submission.postal1, submission.description1, submission.status, submission.created_at], options = {:row_sep => ''}) %>
+  <%= CSV.generate_line([submission.id, submission.name, URI.unescape(submission.jobRole || ''), submission.company_name, submission.email, submission.phone, URI.unescape(submission.country || ''), URI.unescape(submission.usStates || ''), URI.unescape(submission.caTerritories || ''), URI.unescape(submission.ukBoroughs || ''), URI.unescape(submission.postal1 || ''), submission.description, submission.status, submission.created_at], options = {:row_sep => ''}) %>
 <% end %>
