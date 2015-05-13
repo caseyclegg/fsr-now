@@ -4,6 +4,7 @@ require 'twilio-ruby'
 require 'sendgrid-ruby'
 require 'phonelib'
 require 'csv'
+require 'uri'
 
 configure do 
   enable :sessions
@@ -86,7 +87,7 @@ class Submission < ActiveRecord::Base
 
   def phone
     if Phonelib.valid?(self.busPhone)
-      return Phonelib.parse(self.busPhone).e164
+      return Phonelib.parse(URI.unescape(self.busPhone)).e164
     else
       return nil
     end
@@ -205,19 +206,19 @@ end
 
 post '/submissions' do 
   @submission = Submission.new
-  @submission.all_params = params.to_s
-  @submission.busPhone = params[:busPhone] || ''
-  @submission.caTerritories = params[:caTerritories] || ''
-  @submission.company = params[:company] || ''
-  @submission.country = params[:country] || ''
-  @submission.description1 = params[:paragraphText2] || ''
-  @submission.emailAddress = params[:emailAddress] || ''
-  @submission.firstName = params[:firstName] || ''
-  @submission.jobRole = params[:jobRole] || ''
-  @submission.lastName = params[:lastName] || ''
-  @submission.postal1 = params[:postal1] || ''
-  @submission.ukBoroughs = params[:ukBoroughs] || ''
-  @submission.usStates = params[:usStates] || ''
+  @submission.all_params = URI.escape(params.to_s)
+  @submission.busPhone = URI.escape(params[:busPhone] || '')
+  @submission.caTerritories = URI.escape(params[:caTerritories] || '')
+  @submission.company = URI.escape(params[:company] || '')
+  @submission.country = URI.escape(params[:country] || '')
+  @submission.description1 = URI.escape(params[:paragraphText2] || '')
+  @submission.emailAddress = URI.escape(params[:emailAddress] || '')
+  @submission.firstName = URI.escape(params[:firstName] || '')
+  @submission.jobRole = URI.escape(params[:jobRole] || '')
+  @submission.lastName = URI.escape(params[:lastName] || '')
+  @submission.postal1 = URI.escape(params[:postal1] || '')
+  @submission.ukBoroughs = URI.escape(params[:ukBoroughs] || '')
+  @submission.usStates = URI.escape(params[:usStates] || '')
 
   @submission.status =''
 
