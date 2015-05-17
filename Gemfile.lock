@@ -78,6 +78,7 @@ GEM
     unf (0.1.4)
       unf_ext
     unf_ext (0.0.7.1)
+    will_paginate (3.0.7)
 
 PLATFORMS
   ruby
@@ -94,3 +95,4 @@ DEPENDENCIES
   sqlite3
   tux
   twilio-ruby
+  will_paginate (~> 3.0.6)

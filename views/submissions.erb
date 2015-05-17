@@ -2,7 +2,11 @@
 	<div class="row">
 		<div class="col-md-12">
 			<h1>Submissions</h1>
-			<p><button class="btn btn-xs btn-info" onclick="location.href='/submissions.csv'">Download CSV</button>
+			<p><button class="btn btn-xs btn-info" onclick="location.href='/submissions.csv'">Download All</button>
+			<button class="btn btn-xs btn-info" onclick="location.href='/submissions.csv?days_ago=30'">Download Last 30 Days</button>
+			<button class="btn btn-xs btn-info" onclick="location.href='/submissions.csv?days_ago=90'">Download Last 90 Days</button>
+			</p>
+			<%= will_paginate @submissions %>
 			<table class="table table-striped">
 			<tr><th>Date</th><th>Company</th><th>Name</th><th>Email</th><th>Phone</th><th>Description</th><th>Status</th></tr>
 			<% @submissions.each do |submission| %>

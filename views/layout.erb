@@ -32,6 +32,7 @@
         <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
             <ul class="nav navbar-nav">
               <li<% if @active_area == 'submissions' then %> class="active"<% end %>><a href="/submissions">Submissions</a></li>
+              <li<% if @active_area == 'invalid_submissions' then %> class="active"<% end %>><a href="/submissions/invalid">Invalid Submissions</a></li>
               <li<% if @active_area == 'recipients' then %> class="active"<% end %>><a href="/recipients">Recipients</a></li>
               <li<% if @active_area == 'territories' then %> class="active"<% end %>><a href="/territories">Territories</a></li>
               <li<% if @active_area == 'geos' then %> class="active"<% end %>><a href="/geos"><%= settings.routing_logic=='geographic' ? 'Geos' : 'Letters' %></a></li>

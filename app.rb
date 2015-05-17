@@ -5,6 +5,8 @@ require 'sendgrid-ruby'
 require 'phonelib'
 require 'csv'
 require 'uri'
+require 'will_paginate'
+require 'will_paginate/active_record'
 
 configure do 
   enable :sessions
@@ -22,7 +24,7 @@ configure :development do
   set :twilio_auth_token, 'fac4836991adeb182ab32146a6204aae'
   set :base_url, 'http://caseyclegg.ngrok.com'
   set :email_from, 'casey@twilio.com'
-  set :calls_sms_from, '+14156399428'
+  set :calls_sms_from, '+14156399429'
 end
 
 configure :production do
@@ -48,13 +50,20 @@ end
 class Submission < ActiveRecord::Base
   belongs_to :recipient
 
+  before_create do
+    self.invalid_entry = self.email ? false : true
+    self.invalid_entry = true if self.invalid_entry || (not Submission.where(emailAddress: self.emailAddress).where('created_at > ?', Time.now - 24.hours).empty?)
+  end
+
+  self.per_page = 20
+
   def name
     return URI.unescape(self.firstName)+' '+URI.unescape(self.lastName)
   end
 
   def email
-    if /\A[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}+(\.[A-Z]{2,4})?\z/.match(URI.unescape(self.emailAddress))
-      return URI.unescape(self.emailAddress).downcase
+    if self.emailAddress && /\A[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}+(\.[A-Z]{2,4})?\z/.match(URI.unescape(self.emailAddress))
+      return URI.unescape(self.emailAddress || '').downcase
     else
       return nil
     end
@@ -69,23 +78,27 @@ class Submission < ActiveRecord::Base
   end
 
   def message
-    the_message = 'You have a new FSR submission, please reach out '
-    the_message += self.recipient.work_hours? ? 'within the next hour.' : 'as soon as possible.'
+    if self.invalid_entry
+      the_message = 'There is a duplicate FSR submission'
+    else
+      the_message = 'You have a new FSR submission, please reach out '
+      the_message += self.recipient.work_hours? ? 'within the next hour.' : 'as soon as possible.'
+    end
     return the_message
   end
 
   def email_message 
     the_message = self.message+' Here is the info:
-    Company: '+self.company+'
+    Company: '+self.company_name+'
     Name: '+self.name+'
-    Email: '+self.emailAddress+'
-    Phone: '+self.busPhone+'
-    Description: '+self.description1
+    Email: '+self.email+'
+    Phone: '+self.phone+'
+    Description: '+self.description
     return the_message
   end
 
   def sms_message
-    the_message = self.message+' Name: '+self.name+', Company: '+self.company+', Phone: '+self.busPhone
+    the_message = self.message+' Name: '+self.name+', Company: '+self.company_name+', Phone: '+self.phone
     return the_message
   end
 
@@ -99,6 +112,42 @@ class Submission < ActiveRecord::Base
     else
       return nil
     end
+  end
+
+  def assigned_recipient(routing_logic)
+    if routing_logic == 'geographic'
+      if self.country == 'United States'
+        submitted_sub_country = self.usStates
+      elsif self.country == 'Canada'
+        submitted_sub_country = self.caTerritories
+      else
+        submitted_sub_country = ''
+      end
+
+      if Geo.find_by(country: self.country, sub_country: submitted_sub_country, zip_code: self.postal1)
+        recipient = Geo.find_by(country: self.country, sub_country: submitted_sub_country, zip_code: self.postal1).recipient
+        territory = Geo.find_by(country: self.country, sub_country: submitted_sub_country, zip_code: self.postal1).territory.name
+      elsif Geo.find_by(country: self.country, sub_country: submitted_sub_country)
+        recipient = Geo.find_by(country: self.country, sub_country: submitted_sub_country).recipient
+        territory = Geo.find_by(country: self.country, sub_country: submitted_sub_country).territory.name
+      elsif Geo.find_by(country: @submission.country)
+        recipient = Geo.find_by(country: self.country).recipient
+        territory = Geo.find_by(country: self.country).territory.name
+      else
+        recipient = Geo.find_by(country: '').recipient
+        territory = 'none found'
+      end
+    elsif routing_logic == 'alphabetical'
+      first_email_letter = self.email[0]
+      if Geo.find_by(starting_letter: first_email_letter)
+        recipient = Geo.find_by(starting_letter: first_email_letter).recipient
+        territory = Geo.find_by(starting_letter: first_email_letter).territory.name
+      else
+        recipient = Geo.find_by(starting_letter: '').recipient
+        territory = Geo.find_by(starting_letter: '').territory.name
+      end
+    end
+    return recipient, territory
   end
 
 end
@@ -213,98 +262,78 @@ helpers do
 end
 
 post '/submissions' do 
-  @submission = Submission.new
-  @submission.all_params = URI.escape(params.to_s)
-  @submission.busPhone = URI.escape(params[:busPhone] || '')
-  @submission.caTerritories = URI.escape(params[:caTerritories] || '')
-  @submission.company = URI.escape(params[:company] || '')
-  @submission.country = URI.escape(params[:country] || '')
-  @submission.description1 = URI.escape(params[:paragraphText2] || '')
-  @submission.emailAddress = URI.escape(params[:emailAddress] || '')
-  @submission.firstName = URI.escape(params[:firstName] || '')
-  @submission.jobRole = URI.escape(params[:jobRole] || '')
-  @submission.lastName = URI.escape(params[:lastName] || '')
-  @submission.postal1 = URI.escape(params[:postal1] || '')
-  @submission.ukBoroughs = URI.escape(params[:ukBoroughs] || '')
-  @submission.usStates = URI.escape(params[:usStates] || '')
+  @submission = Submission.create(
+    all_params: URI.escape(params.to_s),
+    busPhone: URI.escape(params[:busPhone] || ''),
+    caTerritories: URI.escape(params[:caTerritories] || ''),
+    company: URI.escape(params[:company] || ''),
+    country: URI.escape(params[:country] || ''),
+    description1: URI.escape(params[:paragraphText2] || ''),
+    emailAddress: URI.escape(params[:emailAddress] || ''),
+    firstName: URI.escape(params[:firstName] || ''),
+    jobRole: URI.escape(params[:jobRole] || ''),
+    lastName: URI.escape(params[:lastName] || ''),
+    postal1: URI.escape(params[:postal1] || ''),
+    ukBoroughs: URI.escape(params[:ukBoroughs] || ''),
+    usStates: URI.escape(params[:usStates] || ''),
+    status: '')
 
-  @submission.status =''
-
-  if Submission.where(emailAddress: @submission.emailAddress).where('created_at > ?', Time.now - 3600).empty?
-    @submission.save
-
-    if @submission.email.nil?
-      @submission.status += 'email address invalid, lead not assigned'
-      @submission.save
-    else
-      if settings.routing_logic == 'geographic'
-        if @submission.country == 'United States'
-          submitted_sub_country = @submission.usStates
-        elsif @submission.country == 'Canada'
-          submitted_sub_country = @submission.caTerritories
-        else
-          submitted_sub_country = ''
-        end
-
-        if Geo.find_by(country: @submission.country, sub_country: submitted_sub_country, zip_code: @submission.postal1)
-          recipient = Geo.find_by(country: @submission.country, sub_country: submitted_sub_country, zip_code: @submission.postal1).recipient
-          territory = Geo.find_by(country: @submission.country, sub_country: submitted_sub_country, zip_code: @submission.postal1).territory.name
-        elsif Geo.find_by(country: @submission.country, sub_country: submitted_sub_country)
-          recipient = Geo.find_by(country: @submission.country, sub_country: submitted_sub_country).recipient
-          territory = Geo.find_by(country: @submission.country, sub_country: submitted_sub_country).territory.name
-        elsif Geo.find_by(country: @submission.country)
-          recipient = Geo.find_by(country: @submission.country).recipient
-          territory = Geo.find_by(country: @submission.country).territory.name
-        else
-          recipient = Geo.find_by(country: '').recipient
-          territory = 'none found'
-        end
-      elsif settings.routing_logic == 'alphabetical'
-        first_email_letter = @submission.email[0]
-        if Geo.find_by(starting_letter: first_email_letter)
-          recipient = Geo.find_by(starting_letter: first_email_letter).recipient
-          territory = Geo.find_by(starting_letter: first_email_letter).territory.name
-        else
-          recipient = Geo.find_by(starting_letter: '').recipient
-          territory = Geo.find_by(starting_letter: '').territory.name
-        end
-      end
-
+  if @submission.invalid_entry
+    if @submission.email
+      @submission.status += 'duplicate entry'
+      recipient, territory = @submission.assigned_recipient(settings.routing_logic)
       @submission.recipient_id = recipient.id
-      @submission.status += 'territory: '+territory+', recipient: '+@submission.recipient.name+' - '+@submission.recipient.email
-      @submission.status += recipient.work_hours? ? ', during work hours' : ', outside of work hours'
-      @submission.save
-
-      email_subject = 'New FSR Submission - '+@submission.company
-    
+      email_subject = 'Duplicate FSR Submission in last 24 hours - '+@submission.company
+  
       begin 
         @sendgrid_client = SendGrid::Client.new(api_user: settings.sendgrid_api_user, api_key: settings.sendgrid_api_key)
-        @sendgrid_client.send(SendGrid::Mail.new(to: @submission.recipient.email, from: settings.email_from, subject: email_subject, text: @submission.email_message))
+        @sendgrid_client.send(SendGrid::Mail.new(to: [@submission.recipient.email, 'emerald@twilio.com'], from: settings.email_from, subject: email_subject, text: @submission.email_message))
         @submission.status += ', sent email'
       rescue
         @submission.status += ', error on sending email'
       end
-      @submission.save
+    else
+      @submission.status += 'email address invalid, lead not assigned'
+    end
+    @submission.save
+  else
+    recipient, territory = @submission.assigned_recipient(settings.routing_logic)
 
-      if recipient.work_hours?
-        if @submission.phone.nil?
-          @submission.status += ', no call made because phone number was blank or invalid'
-        else
-          @twilio_client = Twilio::REST::Client.new settings.twilio_account_sid, settings.twilio_auth_token
-          begin
-            @call = @twilio_client.calls.create(
-              from: settings.calls_sms_from,
-              to: @submission.recipient.phone,
-              url: @submission.twilio_gather_url,
-              method: 'GET'
-            ) 
-            @submission.status += ', call_made' 
-          rescue
-            @submission.status += ', error on making call'
-          end
+    @submission.recipient_id = recipient.id
+    @submission.status += 'territory: '+territory+'! recipient: '+@submission.recipient.name+' - '+@submission.recipient.email
+    @submission.status += recipient.work_hours? ? '! during work hours' : '! outside of work hours'
+    @submission.save
+
+    email_subject = 'New FSR Submission - '+@submission.company
+  
+    begin 
+      @sendgrid_client = SendGrid::Client.new(api_user: settings.sendgrid_api_user, api_key: settings.sendgrid_api_key)
+      @sendgrid_client.send(SendGrid::Mail.new(to: @submission.recipient.email, from: settings.email_from, subject: email_subject, text: @submission.email_message))
+      @submission.status += '! sent email'
+    rescue
+      @submission.status += '! error on sending email'
+    end
+    @submission.save
+
+    if recipient.work_hours?
+      if @submission.phone.nil?
+        @submission.status += '! no call made because phone number was blank or invalid'
+      else
+        sleep(5.minutes)
+        @twilio_client = Twilio::REST::Client.new settings.twilio_account_sid, settings.twilio_auth_token
+        begin
+          @call = @twilio_client.calls.create(
+            from: settings.calls_sms_from,
+            to: @submission.recipient.work_phone,
+            url: @submission.twilio_gather_url,
+            method: 'GET'
+          ) 
+          @submission.status += '! call made to bdr' 
+        rescue
+          @submission.status += '! error on making call'
         end
-        @submission.save
       end
+      @submission.save
     end
   end
 end
@@ -313,7 +342,7 @@ get '/call_to_recipient' do
   if params[:submission_id] 
     @submission = Submission.find(params[:submission_id].to_i)
 
-    if params[:Digits].nil?
+    if params[:Digits].nil? || params[:Digits] == '2'
       erb :'twiml/call', :layout => false
     elsif params[:Digits] == '1'
       @submission.status += ', connected call with client'
@@ -328,10 +357,10 @@ get '/call_to_recipient' do
           to: @submission.recipient.phone,
           body: @submission.sms_message
         )
-        @submission.status += ', sent sms message'
+        @submission.status += '! sent sms message'
         @submission.save
       rescue
-        @submission.status += ', error on sending sms'
+        @submission.status += '! error on sending sms'
         @submission.save
       end
       erb :'twiml/end_call', :layout => false
@@ -350,7 +379,7 @@ post '/session' do
     sign_in user
     redirect to('/')
   else
-    @alert = 'Invalid email/password combination'
+    @alert = 'invalid email/password combination'
     redirect to('sign_in')
   end
 end 
@@ -480,15 +509,28 @@ put '/geos/:id' do
   redirect to('/geos')
 end
 
-get '/submissions.?:format?' do
-  @submissions = Submission.all.order('created_at DESC')
+get '/submissions/?:invalid?.?:format?' do
+  if params[:invalid] == 'invalid'
+    @submissions = Submission.where(invalid_entry: true)
+    @active_area = 'invalid_submissions'
+  else
+    @submissions = Submission.where.not(invalid_entry: true)
+    @active_area = 'submissions'
+  end
+
   if params[:format]=='csv'
+    days_ago = params[:days_ago] =~ /\A\d+\Z/ ? params[:days_ago].to_i : nil
+    if days_ago
+      @submissions = @submissions.where(created_at: Time.now.midnight - days_ago.days..Time.now.midnight).order('created_at DESC')
+    else
+      @submissions = @submissions.order('created_at DESC')
+    end
     headers \
       'Content-Disposition' => "attachment; filename=\"fsr-submission.csv\"", 
       'Content-Type' =>'text/csv'
     erb :'submission_log_dump.csv', :layout => false
   else
-    @active_area = 'submissions'
+    @submissions = @submissions.page(params[:page]).order('created_at DESC')
     erb :submissions
   end
 end
