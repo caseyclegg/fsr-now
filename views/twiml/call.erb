@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Response>
 	<Gather action="<%= @submission.twilio_gather_url %>" method="GET" timeout="15" numDigits="1">
-		<Say voice='alice'>This is a Twilio full services request from <%=  @submission.name %><%= ' at '+@submission.company unless @submission.company.is_blank? %>, please press one to call the lead now and
+		<Say voice='alice'>This is a Twilio full services request from <%=  CGI.escapeHTML(@submission.name) %><%= ' at '+CGI.escapeHTML(@submission.company) unless @submission.company.is_blank? %>, please press one to call the lead now and
 			two to repeat this message.</Say>
   </Gather>
   <Redirect method="GET">
