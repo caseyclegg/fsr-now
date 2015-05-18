@@ -311,8 +311,8 @@ post '/submissions' do
       @sendgrid_client = SendGrid::Client.new(api_user: settings.sendgrid_api_user, api_key: settings.sendgrid_api_key)
       @sendgrid_client.send(SendGrid::Mail.new(to: @submission.recipient.email, from: settings.email_from, subject: email_subject, text: @submission.email_message))
       @submission.status += '! sent email'
-    rescue
-      @submission.status += '! error on sending email'
+    rescue Exception => e
+      @submission.status += '! error on sending email, '+e.to_s
     end
     @submission.save
 
@@ -330,8 +330,8 @@ post '/submissions' do
             method: 'GET'
           ) 
           @submission.status += '! call made to bdr' 
-        rescue
-          @submission.status += '! error on making call'
+        rescue Exception => e
+          @submission.status += '! error on making call, '+e.to_s
         end
       end
       @submission.save
@@ -360,8 +360,8 @@ get '/call_to_recipient' do
         )
         @submission.status += '! sent sms message'
         @submission.save
-      rescue
-        @submission.status += '! error on sending sms'
+      rescue Exception => e
+        @submission.status += '! error on sending sms, '+e.to_s
         @submission.save
       end
       erb :'twiml/end_call', :layout => false
