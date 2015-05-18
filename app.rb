@@ -92,8 +92,8 @@ class Submission < ActiveRecord::Base
     the_message = self.message+' Here is the info:
     Company: '+self.company_name+'
     Name: '+self.name+'
-    Email: '+self.email+'
-    Phone: '+self.phone+'
+    Email: '+(self.email || '')+'
+    Phone: '+(self.phone || '')+'
     Description: '+self.description
     return the_message
   end
