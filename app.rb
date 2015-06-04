@@ -284,7 +284,7 @@ post '/submissions' do
       @submission.status += 'duplicate entry'
       recipient, territory = @submission.assigned_recipient(settings.routing_logic)
       @submission.recipient_id = recipient.id
-      email_subject = 'Duplicate FSR Submission in last 24 hours - '+@submission.company
+      email_subject = 'Duplicate FSR Submission in last 24 hours - '+@submission.company_name
   
       begin
         @sendgrid_client = SendGrid::Client.new(api_user: settings.sendgrid_api_user, api_key: settings.sendgrid_api_key)
@@ -305,7 +305,7 @@ post '/submissions' do
     @submission.status += recipient.work_hours? ? '! during work hours' : '! outside of work hours'
     @submission.save
 
-    email_subject = 'New FSR Submission - '+@submission.company
+    email_subject = 'New FSR Submission - '+@submission.company_name
   
     begin 
       @sendgrid_client = SendGrid::Client.new(api_user: settings.sendgrid_api_user, api_key: settings.sendgrid_api_key)
