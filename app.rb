@@ -284,15 +284,15 @@ post '/submissions' do
       @submission.status += 'duplicate entry'
       recipient, territory = @submission.assigned_recipient(settings.routing_logic)
       @submission.recipient_id = recipient.id
-      email_subject = 'Duplicate FSR Submission in last 24 hours - '+@submission.company_name
+      #email_subject = 'Duplicate FSR Submission in last 24 hours - '+@submission.company_name
   
-      begin
-        @sendgrid_client = SendGrid::Client.new(api_user: settings.sendgrid_api_user, api_key: settings.sendgrid_api_key)
-        @sendgrid_client.send(SendGrid::Mail.new(to: [@submission.recipient.email, 'emerald@twilio.com'], from: settings.email_from, subject: email_subject, text: @submission.email_message))
-        @submission.status += ', sent email'
-      rescue Exception => e
-        @submission.status += ', error on sending email, '+e.to_s
-      end
+      #begin
+      #  @sendgrid_client = SendGrid::Client.new(api_user: settings.sendgrid_api_user, api_key: settings.sendgrid_api_key)
+      #  @sendgrid_client.send(SendGrid::Mail.new(to: [@submission.recipient.email, 'emerald@twilio.com'], from: settings.email_from, subject: email_subject, text: @submission.email_message))
+      #  @submission.status += ', sent email'
+      #rescue Exception => e
+      #  @submission.status += ', error on sending email, '+e.to_s
+      #end
     else
       @submission.status += 'email address invalid, lead not assigned'
     end
