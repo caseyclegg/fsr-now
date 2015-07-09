@@ -63,7 +63,7 @@ class Submission < ActiveRecord::Base
   end
 
   def email
-    if self.emailAddress && /\A[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}+(\.[A-Z]{2,4})?\z/.match(URI.unescape(self.emailAddress))
+    if self.emailAddress && /\A[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}+(\.[A-Z]{2,4})?\z/.match(URI.unescape(self.emailAddress))
       return URI.unescape(self.emailAddress || '').downcase
     else
       return nil
